@@ -13,7 +13,12 @@ var Usuario = require('../models/usuario');
 // =========================================
 app.get('/', (req, resp, next) => {
 
+    var desde = req.query.desde || 0;
+    desde = Number(desde);
+
     Usuario.find({}, 'nombre email img role')
+           .skip(desde)
+           .limit(5)
            .exec(
                 (err, usuarios) => {
 
@@ -24,64 +29,17 @@ app.get('/', (req, resp, next) => {
                             errors: err
                         });
                     }
-        
-                    resp.status(200).json({
-                        ok:true,
-                        usuarios: usuarios
-                    });
-                })    
 
-});
+                    Usuario.count({}, (err, conteo) => {
+                        
+                        resp.status(200).json({
+                            ok:true,
+                            usuarios: usuarios,
+                            total:conteo
+                        });
+                    });        
+                });    
 
-// =========================================
-// Actualizar un nuevo usuario
-// =========================================
-app.put('/:id', mdAutenticacion.verificaToken, (req, resp) => {
-
-    var id = req.params.id;
-    var body = req.body;
-
-    Usuario.findById( { _id: id}, (err, usuario) => {         
-
-        if(err){
-            return resp.status(500).json({
-                ok:false,
-                mensaje:'Error al buscar usuario',
-                errors: err
-            });
-        }
-
-        if( !usuario ){
-            return resp.status(400).json({
-                ok:false,
-                mensaje:`No existe un usuario con el id ${ id }`,
-                errors: { message: 'No existe un usuario con ese Id' }
-            });
-        }
-
-        usuario.nombre = body.nombre;
-        usuario.email = body.email;
-        usuario.role = body.role;  
-        
-        usuario.save( (err, usuarioGuardado) => {
-           
-            if( err ){
-                return resp.status(400).json({
-                    ok: false,
-                    mensaje: 'Error al actualizar usuario',
-                    errors: err
-                });
-            }
-
-            usuarioGuardado.password = ":)";
-
-            resp.status(200).json({
-                ok:true,
-                usuario: usuarioGuardado
-            });
-        });
-
-    });
 });
 
 // =========================================
@@ -119,13 +77,64 @@ app.post('/', mdAutenticacion.verificaToken , (req, resp) => {
 });
 
 // =========================================
-// Borrar un nuevo usuario por el Id
+// Actualizar usuario por Id
+// =========================================
+app.put('/:id', mdAutenticacion.verificaToken, (req, resp) => {
+
+    var id = req.params.id;
+    var body = req.body;
+
+    Usuario.findById( { _id: id}, (err, usuario) => {         
+
+        if(err){
+            return resp.status(500).json({
+                ok:false,
+                mensaje:'Error al buscar usuario',
+                errors: err
+            });
+        }
+
+        if( !usuario ){
+            return resp.status(400).json({
+                ok:false,
+                mensaje:`No existe un usuario con el id ${ id }`,
+                errors: { message: 'No existe usuario con ese Id' }
+            });
+        }
+
+        usuario.nombre = body.nombre;
+        usuario.email = body.email;
+        usuario.role = body.role;  
+        
+        usuario.save( (err, usuarioGuardado) => {
+           
+            if( err ){
+                return resp.status(400).json({
+                    ok: false,
+                    mensaje: 'Error al actualizar usuario',
+                    errors: err
+                });
+            }
+
+            usuarioGuardado.password = ":)";
+
+            resp.status(200).json({
+                ok:true,
+                usuario: usuarioGuardado
+            });
+        });
+
+    });
+});
+
+// =========================================
+// Borrar usuario por Id
 // =========================================
 app.delete('/:id', mdAutenticacion.verificaToken, (req, resp) => {
 
     var id = req.params.id;
 
-    Usuario.findOneAndDelete({ _id: id}, (err, usuarioBorrado) => {
+    Usuario.findOneAndRemove({ _id: id}, (err, usuarioBorrado) => {
 
         if(err){
             return resp.status(500).json({
@@ -139,16 +148,15 @@ app.delete('/:id', mdAutenticacion.verificaToken, (req, resp) => {
             return resp.status(400).json({
                 ok:false,
                 mensaje:`No existe un usuario con el id ${ id }`,
-                errors: { message: 'No existe un usuario con ese Id' }
+                errors: { message: 'No existe usuario con ese Id' }
             });
         }
 
         resp.status(200).json({
             ok:true,
-            usuarios: usuarioBorrado
+            usuario: usuarioBorrado
         });
-
-    })
-})
+    });
+});
 
 module.exports = app;
